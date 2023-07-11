@@ -31,20 +31,20 @@ async def shedule_handler():
         print(f'\r{now}', end='')
         await asyncio.sleep(60)
         
-        # if now in TIMES:                
-        text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в Москве: {int(w.temperature('celsius')['temp'])}°\nОщущается как {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
-        print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
-        print(text, '\n')
+        if now in TIMES:                
+            text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в Москве: {int(w.temperature('celsius')['temp'])}°\nОщущается как {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
+            print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
+            print(text, '\n')
 
-        try:
-            sent_message = await bot.send_message(chat_id=ARTEMS_CHAT, text=text)
-            await bot.delete_message(chat_id=ARTEMS_CHAT, message_id=sent_message.message_id - 1)
+            try:
+                sent_message = await bot.send_message(chat_id=ARTEMS_CHAT, text=text)
+                await bot.delete_message(chat_id=ARTEMS_CHAT, message_id=sent_message.message_id - 1)
 
-            with open('log.txt', 'w') as f:
-                f.write(now + ' - sent')    
+                with open('log.txt', 'w') as f:
+                    f.write(now + ' - sent')    
 
-        except Exception as e:
-            print('При отправке возникла ошибка:', e)
+            except Exception as e:
+                print('При отправке возникла ошибка:', e)
 
 if __name__ == '__main__':
     print('Бот запущен\n')
