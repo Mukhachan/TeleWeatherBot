@@ -7,12 +7,7 @@ from datetime import datetime
 
 from config import OWM_KEY, TG_KEY, ARTEMS_CHAT, TIMES
 
-owm = OWM(api_key=OWM_KEY)
-mgr = owm.weather_manager()
 
-
-observation = mgr.weather_at_place('Москва,RU')
-w = observation.weather
 config_dict = get_default_config()
 config_dict['language'] = 'ru'
 
@@ -30,7 +25,13 @@ async def shedule_handler():
         now = datetime.now().strftime("%H:%M")
         print(f'\r{now}', end='')
         await asyncio.sleep(60)
-        
+
+        owm = OWM(api_key=OWM_KEY)
+        mgr = owm.weather_manager()
+
+        observation = mgr.weather_at_place('Москва,RU')
+        w = observation.weather
+
         if now in TIMES:                
             text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в Москве: {int(w.temperature('celsius')['temp'])}°\nОщущается как {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
             print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
