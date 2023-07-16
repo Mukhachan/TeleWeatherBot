@@ -26,26 +26,26 @@ async def shedule_handler():
         print(f'\r{now}', end='')
         await asyncio.sleep(60)
 
-        owm = OWM(api_key=OWM_KEY)
-        mgr = owm.weather_manager()
-
-        observation = mgr.weather_at_place('Москва,RU')
-        w = observation.weather
-
         if now in TIMES:                
-            text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в Москве: {int(w.temperature('celsius')['temp'])}°\nОщущается как {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
-            print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
-            print(text, '\n')
-
             try:
+                owm = OWM(api_key=OWM_KEY)
+                mgr = owm.weather_manager()
+                observation = mgr.weather_at_place('Москва,RU')
+                w = observation.weather
+                text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в Москве: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
+                print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
+                print(text, '\n')
+
                 sent_message = await bot.send_message(chat_id=ARTEMS_CHAT, text=text)
                 await bot.delete_message(chat_id=ARTEMS_CHAT, message_id=sent_message.message_id - 1)
-
                 with open('log.txt', 'w') as f:
                     f.write(now + ' - sent')    
 
             except Exception as e:
-                print('При отправке возникла ошибка:', e)
+                text = 'При отправке возникла ошибка: '+ e
+                print(text)
+                sent_message = await bot.send_message(chat_id=ARTEMS_CHAT, text=text)
+                await bot.delete_message(chat_id=ARTEMS_CHAT, message_id=sent_message.message_id - 1)
 
 if __name__ == '__main__':
     print('Бот запущен\n')
