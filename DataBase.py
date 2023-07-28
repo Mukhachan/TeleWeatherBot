@@ -35,7 +35,6 @@ class DataBase:
             )
             self.__cur.execute(sql)
             self.__connection.commit()
-            
         except Exception as e:
             print('[WARNING] При сохранинии пользователя возникла ошибка', e)
             return False

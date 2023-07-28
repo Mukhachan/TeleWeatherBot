@@ -1,17 +1,22 @@
-from datetime import datetime
-from pyowm import OWM
-from pyowm.utils.config import get_default_config
+import requests
 
-from config import OWM_KEY
+PARAMS = {
+    "apikey":"92b10480-ab04-458b-88b0-2533a3e60440",
+    "format":"json",
+    "lang":"ru_RU",
+    "kind":"house",
+    "geocode": f"55.647914,37.958664"
+}
 
-city = '   Екатеринбург  '.strip().capitalize()
-
-config_dict = get_default_config()
-config_dict['language'] = 'ru'
-
-owm = OWM(api_key=OWM_KEY)
-mgr = owm.weather_manager()
-observation = mgr.weather_at_place(city)
-w = observation.weather
-text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе "+ city +f": {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
-print(text)            
+#отправляем запрос по адресу геокодера.
+try:
+    r = requests.get(url="https://geocode-maps.yandex.ru/1.x/", params=PARAMS)
+    #получаем данные
+    json_data = r.json()
+    #вытаскиваем из всего пришедшего json строку с городом.
+    # ["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"]["Address"]["Components"][2]["name"]
+    city = json_data
+    print(city)
+    
+except:
+    pass

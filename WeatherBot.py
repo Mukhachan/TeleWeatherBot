@@ -56,10 +56,20 @@ async def handle_location(message: types.Message):
     # Получаем широту и долготу
     latitude = message.location.latitude
     longitude = message.location.longitude
+
     # Получаем город
     geolocator = Nominatim(user_agent="your_app_name")
     location = geolocator.reverse(f"{latitude}, {longitude}")
-    city = location.raw['address']['city']
+    try: 
+        city = location.raw['address']['city']
+    except KeyError:
+        print('Вы где-то не в городе')
+        city = location.raw['address']['county'].replace('округ', '').replace('городской', '').strip()
+        print(city)
+    except Exception:
+        print('Отправь геолокацию на самый близжайший от тебя город')
+
+
     # Добавляем город в таблицу с chat_id 
     conn.add_city_by_chatId(city, message.chat.id)
 
@@ -70,7 +80,7 @@ async def handle_location(message: types.Message):
     time_search = conn.search_user_in_times(chat_id=chat_id)
     # Проверяем количество времён в БД. 
     print(time_search, type(time_search))
-    if time_search.count(':') == 0:
+    if str(time_search).count('datetime.timedelta') == 0:
         # В базе данных все записи со временем пустые
         mess = 'Давай заполним в какое время отправлять тебе погоду?\nНа данный момент я могу отправлять погоду два раза в сутки с шагом в 30 минут'
         await add_time(message, chat_id, mess)
@@ -256,7 +266,7 @@ async def shedule_handler():
                     weather_cache = cache_response[1]
 
                 w = weather_cache[person['city']]
-                chat_id = people_list['chat_id']
+                chat_id = person['chat_id']
 
                 text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в Москве: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
                 print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
