@@ -77,7 +77,7 @@ class DataBase:
         
         return True
 
-    def add_time_by_chatId(self, chat_id: int, time: str) -> bool:
+    async def add_time_by_chatId(self, chat_id: int, time: str) -> bool:
         """
             Эта функция добавляет время в пустую ячейку
         """
@@ -170,4 +170,3 @@ class DataBase:
             print('[WARNING] Ошибка при получении времени конкретного пользователя в `times`', e)
             return False
 
-    

@@ -90,16 +90,17 @@ async def handle_location(message: types.Message):
 async def process_message(message: types.Message):
     global current_time
     global last_message
+    last_message = message.text
     chat_id = message.chat.id
     prev_time = current_time
 
     conn = db_connect_old() # Соединяем с БД #
 
     if message.text == "⬅️":
-        await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
+        # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
         current_time = change_time(current_time, '-')
     elif message.text == "➡️":
-        await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
+        # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
         current_time = change_time(current_time, '+')
 
     elif len(message.text) == 5 and ':' in message.text and '0' in message.text:
@@ -112,15 +113,20 @@ async def process_message(message: types.Message):
         if result.count(':') >= 2: # Срабатывает если в БД уже есть 2 записи со временем
             er_mess = f"Ты не можешь получать погоду больше 2х раз\nНа данный момент ты получаешь погоду в {result[0]['time']} и в {result[1]['time']}"
             await message.reply(text=er_mess)
+
         else:
             # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
-            add_time_res = conn.add_time_by_chatId(chat_id, message.text)
+            add_time_res = await conn.add_time_by_chatId(chat_id, message.text)
+            result = conn.search_user_in_times(chat_id=chat_id)
             if add_time_res:
                 print('Смена времени')
                 current_time = '12:00'
-                if len(result) == 2:
+                print('Длина', result, len(result))
+                if 'None' not in str(result):
+                    print('Убираем клавиатуру')
                     reply_markup = types.ReplyKeyboardRemove()
                 else:
+                    print('Выводим клавиатуру')
                     reply_markup = ReplyKeyboardMarkup(resize_keyboard=True)
                     reply_markup.row(KeyboardButton("⬅️"), KeyboardButton(current_time), KeyboardButton("➡️"))
                 
