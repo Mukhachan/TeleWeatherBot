@@ -113,11 +113,16 @@ async def process_message(message: types.Message):
         # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
         current_time = change_time(current_time, '+')
 
-    elif len(message.text) == 5 and ':' in message.text and '0' in message.text:
-        if '🕛 ' in message.text: # Надо изменить уже существующее время #
+    elif 5 <= len(message.text) <= 7 and ':' in message.text and '0' in message.text:
+        print('[INFO] Обрабатываем время')
+        if '🕛' in message.text: # Надо изменить уже существующее время #
             time = message.text.replace('🕛', '').strip()
-            print('Ищем время и город:', time)
-            
+            print('[INFO] Ищем время и город:', time)
+            await conn.search_by_ChatId_and_time(chat_id=chat_id, time=time)
+
+            await add_time(message, chat_id, 'Прошу выбрать новое время:')
+            return
+
 
         result = conn.search_user_in_times(chat_id=chat_id)
         if result.count(':') >= 2: # Срабатывает если в БД уже есть 2 записи со временем
@@ -147,7 +152,7 @@ async def process_message(message: types.Message):
 
     elif message.text == 'Отмена':
         await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
-        await bot.delete_message(chat_id=chat_id, message_id=last_message.message_id)
+        # await bot.delete_message(chat_id=chat_id, message_id=last_message.message_id)
         current_time = '12:00'
         return
     elif message.text == 'Давай добавим время!':
@@ -156,29 +161,28 @@ async def process_message(message: types.Message):
         return
 
     elif message.text == 'Расписание 📅': 
+        print('[INFO] Принтуем расписание')
         mess = 'Вот твоё расписание\nНажми на время которое хочешь поменять'
-        add_time(message=message, chat_id=chat_id, mess=mess, pref=True)
+        await add_time(message=message, chat_id=chat_id, mess=mess, pref=True)
 
     if prev_time != current_time:
         # Отправляем обновленную клавиатуру
         mess = last_message
         await add_time(message, chat_id, mess)
 
-        # last_message = await bot.send_message(chat_id, mess, reply_markup=keyboard)
-        # await bot.delete_message(chat_id=chat_id, message_id=last_message.message_id-1)
-
 
 # Отображает отправку времени #
-async def add_time(message: types.Message, chat_id: int, mess: str = 'Выбери время:', pref: bool = False, change: bool = False):
+async def add_time(message: types.Message, chat_id: int, mess: str = 'Выбери время:', pref: str = False, change: bool = False):
     """
         Вызывается при нажатии на любую кнопку, которая подразумевает выбор ВРЕМЕНИ
     """
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     if pref:
         res = db_connect_old().search_user_in_times(message.chat.id)
-        first_time = res[0]['time']
-        second_button = res[1]['time']
-        keyboard.row(KeyboardButton('🕛 '+ first_time), KeyboardButton(second_button + ' 🕛'))
+        first_time = str(res[0]['time'])[:-3]
+        second_time = str(res[1]['time'])[:-3]
+        print(f'[INFO] Выводим пользователю его время {first_time} и {second_time}')
+        keyboard.row(KeyboardButton(f'🕛 {first_time}'), KeyboardButton(f'{second_time} 🕛'))
 
     else:
         keyboard = ReplyKeyboardMarkup(resize_keyboard=True)

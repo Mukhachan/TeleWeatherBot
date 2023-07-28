@@ -169,3 +169,21 @@ class DataBase:
             print('[WARNING] Ошибка при получении времени конкретного пользователя в `times`', e)
             return False
 
+    async def search_by_ChatId_and_time(self, chat_id: int, time: str) -> tuple:
+        """
+            Ищет запись по chat_id и time и заменяет time на newtime
+        """
+        sql = (
+            f'UPDATE `ArtemsWeatherBot`.`times` SET time=NULL WHERE chat_id={chat_id} AND `time`="{time}:00" '
+        )
+        try:
+            self.__cur.execute(sql)
+            self.__connection.commit()
+            print("Затронуто строк:", self.__cur.rowcount)
+            if self.__cur.rowcount == 0:
+                return False
+            else:
+                return True
+        except Exception as e:
+            print('[WARNING] Ошибка при добавлении нового времени для пользователя', e)
+            return False        
