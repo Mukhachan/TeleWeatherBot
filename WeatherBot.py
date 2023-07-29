@@ -230,6 +230,8 @@ async def shedule_handler():
     cache_response = get_weather_cache()
     cities = cache_response[0]
     weather_cache = cache_response[1]
+    weather_cache['last_update'] = datetime.now()
+    
     while True:
         now = datetime.now().strftime("%H:%M")
         print(f'\r{now}', end='')      
@@ -239,7 +241,7 @@ async def shedule_handler():
             people_list = db_connect_old().search_by_city_and_nowtime(city) # Получаем список пользователей которым нужно отправить погоду
             for person in people_list: # Перебираем список пользователей #
                 print(person)
-                if person['city'] not in weather_cache: # Если в кэше нет нужного города, то обновляем его и едем дальше
+                if person['city'] not in weather_cache and (datetime.now() - weather_cache['last_update']).total_seconds()/60 > 3*60: # Если в кэше нет нужного города, то обновляем его и едем дальше
                     cache_response = get_weather_cache()
                     cities = cache_response[0]
                     weather_cache = cache_response[1]
