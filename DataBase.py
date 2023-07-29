@@ -126,8 +126,11 @@ class DataBase:
         # Расчет временных интервалов
         start_time = (datetime.datetime.strptime(current_time, '%H:%M') - time_difference).strftime('%H:%M')
         end_time = (datetime.datetime.strptime(current_time, '%H:%M') + time_difference).strftime('%H:%M')
+        # sql = (
+        #     f"SELECT * FROM `ArtemsWeatherBot`.`times` WHERE `city`='{city}' and `time` BETWEEN '{start_time}' AND '{end_time}' "
+        # )
         sql = (
-            f"SELECT * FROM `ArtemsWeatherBot`.`times` WHERE `city`='{city}' and `time` BETWEEN '{start_time}' AND '{end_time}' "
+            f"SELECT * FROM `ArtemsWeatherBot`.`times` WHERE `city`='{city}' and `time`='{current_time}'"
         )
         try:
             self.__cur.execute(sql)

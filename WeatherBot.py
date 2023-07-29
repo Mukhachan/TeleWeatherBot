@@ -191,7 +191,7 @@ async def add_time(message: types.Message, chat_id: int, mess: str = 'Выбер
     keyboard.row(KeyboardButton("Отмена"))
 
     last_message = await bot.send_message(chat_id, mess, reply_markup=keyboard)
-    await bot.delete_message(chat_id=chat_id, message_id=last_message.message_id-1)
+    # await bot.delete_message(chat_id=chat_id, message_id=last_message.message_id-1)
 
 # Отображает отправку города #
 async def add_city(message: types.Message, chat_id: int, mess: str = 'Выбери город:'):
@@ -209,33 +209,6 @@ def change_time(time_str, side: str):
     elif side == '-':
         new_time = (total_minutes - 30) % (24 * 60)
     return "{:02d}:{:02d}".format(new_time // 60, new_time % 60)
-
-
-# async def shedule_handler():
-#     while True:
-#         now = datetime.now().strftime("%H:%M")
-#         print(f'\r{now}', end='')
-#         await asyncio.sleep(60)
-
-#         if now in TIMES:                
-#             try:
-#                 observation = mgr.weather_at_place('Москва,RU')
-#                 w = observation.weather
-
-#                 text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в Москве: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
-#                 print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
-#                 print(text, '\n')
-
-#                 sent_message = await bot.send_message(chat_id=ARTEMS_CHAT, text=text)
-#                 await bot.delete_message(chat_id=ARTEMS_CHAT, message_id=sent_message.message_id - 1)
-#                 with open('log.txt', 'w') as f:
-#                     f.write(now + ' - sent')    
-
-#             except Exception as e:
-#                 text = 'При отправке возникла ошибка: '+ e
-#                 print(text)
-#                 sent_message = await bot.send_message(chat_id=ARTEMS_CHAT, text=text)
-#                 await bot.delete_message(chat_id=ARTEMS_CHAT, message_id=sent_message.message_id - 1)
 
 
 def get_weather_cache():
@@ -260,10 +233,12 @@ async def shedule_handler():
     while True:
         now = datetime.now().strftime("%H:%M")
         print(f'\r{now}', end='')      
-        await asyncio.sleep(120) # Ждём 2 минуты
+        await asyncio.sleep(60) # Ждём минуту
+
         for city in cities: # Перебираем города
             people_list = db_connect_old().search_by_city_and_nowtime(city) # Получаем список пользователей которым нужно отправить погоду
             for person in people_list: # Перебираем список пользователей #
+                print(person)
                 if person['city'] not in weather_cache: # Если в кэше нет нужного города, то обновляем его и едем дальше
                     cache_response = get_weather_cache()
                     cities = cache_response[0]
@@ -272,12 +247,13 @@ async def shedule_handler():
                 w = weather_cache[person['city']]
                 chat_id = person['chat_id']
 
-                text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в Москве: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}"
+                text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе Москва: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"
+
                 print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
                 print(text, '\n')
 
                 sent_message = await bot.send_message(chat_id=chat_id, text=text)
-                await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
+                # await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
 
 if __name__ == '__main__':
     print('Бот запущен\n')
