@@ -245,6 +245,7 @@ async def shedule_handler():
                     cache_response = get_weather_cache()
                     cities = cache_response[0]
                     weather_cache = cache_response[1]
+                    weather_cache['last_update'] = datetime.now()
 
                 w = weather_cache[person['city']]
                 chat_id = person['chat_id']
