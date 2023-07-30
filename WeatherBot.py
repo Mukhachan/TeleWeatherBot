@@ -13,7 +13,6 @@ from config import OWM_KEY, TG_KEY, db_connect_old
 config_dict = get_default_config()
 config_dict['language'] = 'ru'
 owm = OWM(api_key=OWM_KEY)
-mgr = owm.weather_manager() # Получаем свежую погоду
 
 bot = Bot(token=TG_KEY) # Подключаемся к боту
 dp = Dispatcher(bot)
@@ -213,6 +212,7 @@ def change_time(time_str, side: str):
 
 def get_weather_cache():
     # Кэш для хранения данных о погоде для каждого города
+    mgr = owm.weather_manager() # Получаем свежую погоду
     weather_cache = {}
     cities = []
     for i in db_connect_old().get_cities(): # Получаем список всех городов в БД
@@ -220,10 +220,11 @@ def get_weather_cache():
     cities = set(cities)
 
     for city in cities: # Получаем погоду по всем городам
-        observation = mgr.weather_at_place(city)
+        observation = mgr.weather_at_place(city + ", RU")
         w = observation.weather
         weather_cache[city] = w
     
+    del mgr
     return cities, weather_cache
 
 async def shedule_handler():
@@ -256,7 +257,7 @@ async def shedule_handler():
                 print(text, '\n')
 
                 sent_message = await bot.send_message(chat_id=chat_id, text=text)
-                # await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
+                await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
 
 if __name__ == '__main__':
     print('Бот запущен\n')
