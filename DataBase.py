@@ -189,4 +189,21 @@ class DataBase:
                 return True
         except Exception as e:
             print('[WARNING] Ошибка при добавлении нового времени для пользователя', e)
-            return False        
+            return False
+
+    def change_log(self, change_text: str) -> bool:
+        """
+            Это просто функция для логгирования всяких важных событий
+        """
+        change_time = datetime.datetime.now()
+
+        sql = (
+            f'INSERT INTO `ArtemsWeatherBot`.`change_log` VALUES(NULL, {change_text}, {change_time})'
+        )
+        try:
+            self.__cur.execute(sql)
+            self.__connection.commit()
+            return True
+        except Exception as e:
+            print('[WARNING] При создании лога возникла ошибка', e)
+            return False

@@ -10,10 +10,6 @@ from datetime import datetime
 
 from config import OWM_KEY, TG_KEY, db_connect_old
 
-config_dict = get_default_config()
-config_dict['language'] = 'ru'
-owm = OWM(api_key=OWM_KEY)
-
 bot = Bot(token=TG_KEY) # Подключаемся к боту
 dp = Dispatcher(bot)
 
@@ -122,13 +118,13 @@ async def process_message(message: types.Message):
             await add_time(message, chat_id, 'Прошу выбрать новое время:')
             return
 
-
         result = conn.search_user_in_times(chat_id=chat_id)
         if result.count(':') >= 2: # Срабатывает если в БД уже есть 2 записи со временем
             er_mess = f"Ты не можешь получать погоду больше 2х раз\nНа данный момент ты получаешь погоду в {result[0]['time']} и в {result[1]['time']}"
             await message.reply(text=er_mess)
 
         else:
+            db_connect_old().change_log(f"Изменено время для пользователя {chat_id}")
             # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
             add_time_res = await conn.add_time_by_chatId(chat_id, message.text)
             result = conn.search_user_in_times(chat_id=chat_id)
@@ -211,10 +207,16 @@ def change_time(time_str, side: str):
 
 
 def get_weather_cache():
+    db_connect_old().change_log('Обращаемся к OWM за новыми данными')
+    config_dict = get_default_config()
+    config_dict['language'] = 'ru'
+    owm = OWM(api_key=OWM_KEY, config=config_dict)
+
     # Кэш для хранения данных о погоде для каждого города
     mgr = owm.weather_manager() # Получаем свежую погоду
     weather_cache = {}
     cities = []
+
     for i in db_connect_old().get_cities(): # Получаем список всех городов в БД
         cities.append(i['city'])
     cities = set(cities)
@@ -223,8 +225,8 @@ def get_weather_cache():
         observation = mgr.weather_at_place(city + ", RU")
         w = observation.weather
         weather_cache[city] = w
-    
-    del mgr
+
+    del owm, mgr
     return cities, weather_cache
 
 async def shedule_handler():
