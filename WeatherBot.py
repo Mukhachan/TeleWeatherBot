@@ -257,7 +257,7 @@ async def shedule_handler():
                 print(text, '\n')
 
                 sent_message = await bot.send_message(chat_id=chat_id, text=text)
-                await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
+                # await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
 
 if __name__ == '__main__':
     print('Бот запущен\n')
