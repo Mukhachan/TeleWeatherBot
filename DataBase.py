@@ -198,7 +198,7 @@ class DataBase:
         change_time = datetime.datetime.now()
 
         sql = (
-            f'INSERT INTO `ArtemsWeatherBot`.`change_log` VALUES(NULL, {change_text}, {change_time})'
+            f'INSERT INTO `ArtemsWeatherBot`.`change_log` VALUES(NULL, "{change_text}", "{change_time}")'
         )
         try:
             self.__cur.execute(sql)
