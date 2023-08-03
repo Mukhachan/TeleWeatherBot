@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `ArtemsWeatherBot`.`times`(
     user_id bigint NOT NULL,
     time time NULL,
     city text NOT NULL,
+    sending text NOT NULL,
     PRIMARY KEY (id)
 );
 CREATE TABLE IF NOT EXISTS `ArtemsWeatherBot`.`change_log`(

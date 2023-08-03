@@ -43,13 +43,15 @@ class DataBase:
         try:
             for i in range(2):
                 sql = (
-                    f'INSERT INTO `ArtemsWeatherBot`.`times` VALUES(NULL, {chat_id}, NULL, NULL)'
+                    f'INSERT INTO `ArtemsWeatherBot`.`times` VALUES(NULL, {chat_id}, NULL, NULL, "True")'
                 )
                 self.__cur.execute(sql)
                 self.__connection.commit()
         except Exception as e:
             print('[WARNING] При сохранении времени возникла ошибка', e)
             return False
+        
+        self.change_log(f'Регистрация нового пользователя {username}')
 
     def add_city_by_chatId(self, city: str, chat_id: int) -> bool:
         """
@@ -92,6 +94,7 @@ class DataBase:
             if self.__cur.rowcount == 0:
                 return False
             else:
+                self.change_log(f'Смена времени у пользовател {chat_id}')
                 return True
         except Exception as e:
             print('[WARNING] Ошибка при добавлении нового времени для пользователя', e)
@@ -130,7 +133,7 @@ class DataBase:
         #     f"SELECT * FROM `ArtemsWeatherBot`.`times` WHERE `city`='{city}' and `time` BETWEEN '{start_time}' AND '{end_time}' "
         # )
         sql = (
-            f"SELECT * FROM `ArtemsWeatherBot`.`times` WHERE `city`='{city}' and `time`='{current_time}'"
+            f"SELECT * FROM `ArtemsWeatherBot`.`times` WHERE `city`='{city}' and `time`='{current_time}' and `sending`='True'"
         )
         try:
             self.__cur.execute(sql)
@@ -207,3 +210,17 @@ class DataBase:
         except Exception as e:
             print('[WARNING] При создании лога возникла ошибка', e)
             return False
+    
+    def change_sending(self, chat_id: int, text: str) -> bool:
+        """
+            Меняет значение в столбце sending
+        """
+        sql = f'UPDATE `ArtemsWeatherBot`.`times` SET sending = "{text}" WHERE chat_id={chat_id}'
+        try:
+            self.__cur.execute(sql)
+            self.__connection.commit()
+            return True
+        except Exception as e:
+            print('[WARNING] Произошла ошибка при изменении отправки:', e)
+            return False
+        

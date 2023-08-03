@@ -5,6 +5,7 @@ import asyncio
 from aiogram import Bot, Dispatcher, types, executor
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ContentType
 from geopy.geocoders import Nominatim
+from aiogram.utils.exceptions import BotBlocked
 
 from datetime import datetime
 
@@ -25,13 +26,15 @@ async def start(message: types.Message):
 
     conn = db_connect_old()
     await bot.send_message(chat_id=chat_id, text=mess)
-    
     if conn.check_user(chat_id):
-        mess = 'Ты уже имеешь здесь аккаунт!\nЧто бы посмотреть свои настройки просто введи команду /settings'
+        mess = 'Твой аккаунт разморожен!)\nЧто бы посмотреть свои настройки просто введи команду /settings'
         await bot.send_message(chat_id=chat_id, text=mess)
+        await bot.send_message(chat_id=chat_id, text='Добро пожаловать!')
+        conn.change_sending(chat_id, 'True')
     else:
         mess = 'Как я вижу, раньше ты не пользовался мной.\nДавай начнём с того где ты живёшь.\nОтправь свой город'
         conn.add_user(username=username, chat_id=chat_id)
+        
         del conn
         await add_city(message, chat_id, mess)
 
@@ -108,13 +111,18 @@ async def process_message(message: types.Message):
         # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
         current_time = change_time(current_time, '+')
 
-    elif 5 <= len(message.text) <= 7 and ':' in message.text and '0' in message.text:
+     
+     # Входной текст от 5 до 7 симвов #  В тексте содержится :  #  Последний символ '0'
+    elif 5 <= len(message.text) <= 7 and ':' in message.text and message.text[-1] == '0':
+        if message.text[-2] not in ('0', '3'):
+            message.reply('Ты можешь указать время только с шагом в 30 минут\nК примеру: 12:00, 12:30, 13:00 и т.д.')
+            return
+        
         print('[INFO] Обрабатываем время')
-        if '🕛' in message.text: # Надо изменить уже существующее время #
+        if '🕛' in message.text: # Надо изм\\енить уже существующее время #
             time = message.text.replace('🕛', '').strip()
             print('[INFO] Ищем время и город:', time)
             await conn.search_by_ChatId_and_time(chat_id=chat_id, time=time)
-
             await add_time(message, chat_id, 'Прошу выбрать новое время:')
             return
 
@@ -146,7 +154,8 @@ async def process_message(message: types.Message):
                 await bot.send_message(chat_id, 'Произошла, какая-то беда\nНапиши Артёму (@Mukhachan_dev)')
 
     elif message.text == 'Отмена':
-        await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
+        # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
+        await message.reply('Хорошо. Клавиатуру я вряд ли спрячу, но допекать не буду')
         # await bot.delete_message(chat_id=chat_id, message_id=last_message.message_id)
         current_time = '12:00'
         return
@@ -154,7 +163,6 @@ async def process_message(message: types.Message):
         message.reply('Хорошо')
         await add_time(message, chat_id)
         return
-
     elif message.text == 'Расписание 📅': 
         print('[INFO] Принтуем расписание')
         mess = 'Вот твоё расписание\nНажми на время которое хочешь поменять'
@@ -205,8 +213,8 @@ def change_time(time_str, side: str):
         new_time = (total_minutes - 30) % (24 * 60)
     return "{:02d}:{:02d}".format(new_time // 60, new_time % 60)
 
-
 def get_weather_cache():
+    print('Обращаемся к OWM за новыми данными')
     db_connect_old().change_log('Обращаемся к OWM за новыми данными')
     config_dict = get_default_config()
     config_dict['language'] = 'ru'
@@ -257,9 +265,15 @@ async def shedule_handler():
 
                 print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
                 print(text, '\n')
-
-                sent_message = await bot.send_message(chat_id=chat_id, text=text)
-                # await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
+                try:
+                    sent_message = await bot.send_message(chat_id=chat_id, text=text)
+                    # await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
+                except BotBlocked:
+                    conn = db_connect_old()
+                    print(f'Пользователь {person} нас заблокировал')
+                    conn.change_log(f'Пользователь {person} нас заблокировал')
+                    conn.change_sending(chat_id=chat_id, text='False')
+                    del conn
 
 if __name__ == '__main__':
     print('Бот запущен\n')
