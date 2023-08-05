@@ -261,7 +261,7 @@ async def shedule_handler():
                 w = weather_cache[person['city']]
                 chat_id = person['chat_id']
 
-                text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе Москва: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"
+                text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе {person['city']}: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"
 
                 print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
                 print(text, '\n')
