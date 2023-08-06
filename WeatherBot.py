@@ -63,10 +63,12 @@ async def handle_location(message: types.Message):
     except KeyError:
         print('Вы где-то не в городе')
         city = location.raw['address']['county'].replace('округ', '').replace('городской', '').strip()
+        await message.reply('Отправь геолокацию на самый близжайший от тебя город')
         print(city)
+        return
     except Exception:
         print('Отправь геолокацию на самый близжайший от тебя город')
-
+        await message.reply('Отправь геолокацию на самый близжайший от тебя город')
 
     # Добавляем город в таблицу с chat_id 
     conn.add_city_by_chatId(city, message.chat.id)
@@ -230,10 +232,12 @@ def get_weather_cache():
     cities = set(cities)
 
     for city in cities: # Получаем погоду по всем городам
-        observation = mgr.weather_at_place(city + ", RU")
-        w = observation.weather
-        weather_cache[city] = w
-
+        try:
+            observation = mgr.weather_at_place(city + ", RU")
+            w = observation.weather
+            weather_cache[city] = w
+        except Exception as e:
+            weather_cache[city] = 'Город не найден'
     del owm, mgr
     return cities, weather_cache
 
@@ -260,8 +264,10 @@ async def shedule_handler():
 
                 w = weather_cache[person['city']]
                 chat_id = person['chat_id']
-
-                text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе {person['city']}: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"
+                if w == 'Город не найден':
+                    text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nЯ не могу отправить тебе погоду так как ты не указал близжайший от себя город\nОтправь мне геопозицую и в следующий раз я всё отправлю)"
+                else:
+                    text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе {person['city']}: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"
 
                 print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
                 print(text, '\n')
