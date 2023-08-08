@@ -4,12 +4,14 @@ from pyowm.utils.config import get_default_config
 import asyncio
 from aiogram import Bot, Dispatcher, types, executor
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ContentType
-from geopy.geocoders import Nominatim
 from aiogram.utils.exceptions import BotBlocked
+
+from geopy.geocoders import Nominatim
+import requests
 
 from datetime import datetime
 
-from config import OWM_KEY, TG_KEY, db_connect_old
+from config import OWM_KEY, TG_KEY, headers, db_connect_old
 
 bot = Bot(token=TG_KEY) # Подключаемся к боту
 dp = Dispatcher(bot)
@@ -52,20 +54,30 @@ async def handle_location(message: types.Message):
     chat_id = message.chat.id
 
     # Получаем широту и долготу
-    latitude = message.location.latitude
-    longitude = message.location.longitude
-
+    latitude = str(message.location.latitude)[:6]
+    longitude = str(message.location.longitude)[:6]
+    print(latitude, longitude)
+    params = {
+        'latitude': latitude,
+        'longitude': longitude,
+        'limit': 1
+    }
     # Получаем город
-    geolocator = Nominatim(user_agent="your_app_name")
-    location = geolocator.reverse(f"{latitude}, {longitude}")
+    # geolocator = Nominatim(user_agent="your_app_name")
+    # location = geolocator.reverse(f"{latitude}, {longitude}")
     try: 
-        city = location.raw['address']['city']
-    except KeyError:
-        print('Вы где-то не в городе')
-        city = location.raw['address']['county'].replace('округ', '').replace('городской', '').strip()
-        await message.reply('Отправь геолокацию на самый близжайший от тебя город')
-        print(city)
-        return
+        # city = location.raw['address']['city']
+        r = requests.get('https://api.gismeteo.net/v2/search/cities/', params=params, headers=headers)
+        print(r.url)
+        response = r.json()['response'][0]
+        city = response['id']
+        city_name = response['district']['nameP']
+    # except KeyError:
+    #     print('Вы где-то не в городе')
+    #     # city = location.raw['address']['county'].replace('округ', '').replace('городской', '').strip()
+    #     await message.reply('Отправь геолокацию на самый близжайший от тебя город')
+    #     print(city)
+    #     return
     except Exception:
         print('Отправь геолокацию на самый близжайший от тебя город')
         await message.reply('Отправь геолокацию на самый близжайший от тебя город')
@@ -75,7 +87,7 @@ async def handle_location(message: types.Message):
 
     # Отправляем поздравительное сообщение
     reply_markup = types.ReplyKeyboardRemove()
-    await message.reply(f"Город успешно изменён на: "+ city, reply_markup=reply_markup)
+    await message.reply(f"Теперь ваш город: "+ response['district']['name'], reply_markup=reply_markup)
     
     time_search = conn.search_user_in_times(chat_id=chat_id)
     # Проверяем количество времён в БД. 
@@ -216,14 +228,13 @@ def change_time(time_str, side: str):
     return "{:02d}:{:02d}".format(new_time // 60, new_time % 60)
 
 def get_weather_cache():
-    print('Обращаемся к OWM за новыми данными')
-    db_connect_old().change_log('Обращаемся к OWM за новыми данными')
-    config_dict = get_default_config()
-    config_dict['language'] = 'ru'
-    owm = OWM(api_key=OWM_KEY, config=config_dict)
-
+    print('Обращаемся к GISMETEO за новыми данными')
+    db_connect_old().change_log('Обращаемся к GISMETEO за новыми данными')
+    # config_dict = get_default_config()
+    # config_dict['language'] = 'ru'
+    # owm = OWM(api_key=OWM_KEY, config=config_dict)
     # Кэш для хранения данных о погоде для каждого города
-    mgr = owm.weather_manager() # Получаем свежую погоду
+    # mgr = owm.weather_manager() # Получаем свежую погоду
     weather_cache = {}
     cities = []
 
@@ -233,12 +244,17 @@ def get_weather_cache():
 
     for city in cities: # Получаем погоду по всем городам
         try:
-            observation = mgr.weather_at_place(city + ", RU")
-            w = observation.weather
-            weather_cache[city] = w
+            # observation = mgr.weather_at_place(city + ", RU")
+            # weather_cache[city] = w
+            r = requests.get(f'https://api.gismeteo.net/v2/weather/current/{city}/', headers=headers)
+            weather_cache[city] = r.json()['response']
+
         except Exception as e:
+            print(f'С погодой для города {city} возникла ошибка: {e}')
+            db_connect_old().change_log(f'Ошибка погоды для города {city}')
             weather_cache[city] = 'Город не найден'
-    del owm, mgr
+    
+    del r
     return cities, weather_cache
 
 async def shedule_handler():
@@ -256,7 +272,7 @@ async def shedule_handler():
             people_list = db_connect_old().search_by_city_and_nowtime(city) # Получаем список пользователей которым нужно отправить погоду
             for person in people_list: # Перебираем список пользователей #
                 print(person)
-                if person['city'] not in weather_cache or (datetime.now() - weather_cache['last_update']).total_seconds()/60 > 3*60: # Если в кэше нет нужного города, то обновляем его и едем дальше
+                if person['city'] not in weather_cache or (datetime.now() - weather_cache['last_update']).total_seconds()/60 > 6*60: # Если в кэше нет нужного города, то обновляем его и едем дальше
                     cache_response = get_weather_cache()
                     cities = cache_response[0]
                     weather_cache = cache_response[1]
@@ -267,17 +283,37 @@ async def shedule_handler():
                 if w == 'Город не найден':
                     text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nЯ не могу отправить тебе погоду так как ты не указал близжайший от себя город\nОтправь мне геопозицую и в следующий раз я всё отправлю)"
                 else:
-                    text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе {person['city']}: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"
+                    humidity = w['humidity']['percent']
+                    description = w['description']['full']
+                    temperature = w['temperature']['air']['C']
+                    cloudiness = w['cloudiness']['percent']
+                    precipitation = w['precipitation']
+                    
+                    precipitation_emo = ['☀️ нет осадков', '🌧️ дождик', '🌨️снег', 'смешанные осадки']
+                    intensity_emo = ['нет осадков', 'небольшой дождь / снег', 'дождь / снег', 'сильный дождь / снег']
+                    x = cloudiness
+                    smile = "🌤️" if x <= 20 else "⛅️" if x <= 50 else "🌥️" if x <= 75 else "☁️"
 
-                print('\nОТПРАВЛЕНО СООБЩЕНИЕ:')
+                    text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас 🌡️ температура в твоём городе: {temperature}°\n",\
+                    f"💧Влажность: {humidity}%\n",\
+                    f"Описание: {description}\n",\
+                    f"Облачность: {cloudiness}% {smile}\n",\
+                    f"Осадки:\n",\
+                    f"    Тип: {precipitation['type']}/3 - {precipitation_emo[int(precipitation['type'])]}\n",\
+                    f"    Количество: {precipitation['amount']}мм\n",\
+                    f"    Интенсивность: {precipitation['intensity']}/3 - {intensity_emo[int(precipitation['intensity'])]}\n"
+                    text = "".join(text)
+                    ### text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе {person['city']}: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"
+
+                print('ОТПРАВЛЕНО СООБЩЕНИЕ:')
                 print(text, '\n')
                 try:
                     sent_message = await bot.send_message(chat_id=chat_id, text=text)
                     # await bot.delete_message(chat_id=chat_id, message_id=sent_message.message_id - 1)
                 except BotBlocked:
                     conn = db_connect_old()
-                    print(f'Пользователь {person} нас заблокировал')
-                    conn.change_log(f'Пользователь {person} нас заблокировал')
+                    print(f'Пользователь {chat_id} нас заблокировал')
+                    conn.change_log(f'Пользователь {chat_id} нас заблокировал')
                     conn.change_sending(chat_id=chat_id, text='False')
                     del conn
 
