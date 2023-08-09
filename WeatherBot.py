@@ -1,17 +1,13 @@
-from pyowm import OWM
-from pyowm.utils.config import get_default_config
-
 import asyncio
 from aiogram import Bot, Dispatcher, types, executor
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ContentType
 from aiogram.utils.exceptions import BotBlocked
 
-from geopy.geocoders import Nominatim
 import requests
 
 from datetime import datetime
 
-from config import OWM_KEY, TG_KEY, headers, db_connect_old
+from config import TG_KEY, headers, db_connect_old
 
 bot = Bot(token=TG_KEY) # Подключаемся к боту
 dp = Dispatcher(bot)
@@ -62,22 +58,12 @@ async def handle_location(message: types.Message):
         'longitude': longitude,
         'limit': 1
     }
-    # Получаем город
-    # geolocator = Nominatim(user_agent="your_app_name")
-    # location = geolocator.reverse(f"{latitude}, {longitude}")
     try: 
-        # city = location.raw['address']['city']
         r = requests.get('https://api.gismeteo.net/v2/search/cities/', params=params, headers=headers)
         print(r.url)
         response = r.json()['response'][0]
         city = response['id']
         city_name = response['district']['nameP']
-    # except KeyError:
-    #     print('Вы где-то не в городе')
-    #     # city = location.raw['address']['county'].replace('округ', '').replace('городской', '').strip()
-    #     await message.reply('Отправь геолокацию на самый близжайший от тебя город')
-    #     print(city)
-    #     return
     except Exception:
         print('Отправь геолокацию на самый близжайший от тебя город')
         await message.reply('Отправь геолокацию на самый близжайший от тебя город')
@@ -106,7 +92,7 @@ async def handle_location(message: types.Message):
     elif time_search.count(':') >= 2:
         print(f'Расписание для {chat_id} уже забито')
 
-    del conn
+    del conn, r
 
 @dp.message_handler()
 async def process_message(message: types.Message):
@@ -127,13 +113,15 @@ async def process_message(message: types.Message):
 
      
      # Входной текст от 5 до 7 симвов #  В тексте содержится :  #  Последний символ '0'
-    elif 5 <= len(message.text) <= 7 and ':' in message.text and message.text[-1] == '0':
-        if message.text[-2] not in ('0', '3'):
-            message.reply('Ты можешь указать время только с шагом в 30 минут\nК примеру: 12:00, 12:30, 13:00 и т.д.')
+    elif 5 <= len(message.text) <= 7 and ':' in message.text or '🕛 None' in message.text:
+        print('Получил время')
+        if message.text[-2] not in ('0', '3', 'n') and '🕛' not in message.text:
+            await bot.send_message(chat_id=chat_id, text='Ты можешь указать время только с шагом в 30 минут\nК примеру: 12:00, 12:30, 13:00 и т.д.')
             return
         
         print('[INFO] Обрабатываем время')
         if '🕛' in message.text: # Надо изм\\енить уже существующее время #
+            print('Зашли в условие')
             time = message.text.replace('🕛', '').strip()
             print('[INFO] Ищем время и город:', time)
             await conn.search_by_ChatId_and_time(chat_id=chat_id, time=time)
@@ -166,7 +154,8 @@ async def process_message(message: types.Message):
                 return
             else:
                 await bot.send_message(chat_id, 'Произошла, какая-то беда\nНапиши Артёму (@Mukhachan_dev)')
-
+    elif message.text == 'chat_id':
+        message.reply("ID этого чата:", chat_id)
     elif message.text == 'Отмена':
         # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
         await message.reply('Хорошо. Клавиатуру я вряд ли спрячу, но допекать не буду')
@@ -196,8 +185,8 @@ async def add_time(message: types.Message, chat_id: int, mess: str = 'Выбер
     keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
     if pref:
         res = db_connect_old().search_user_in_times(message.chat.id)
-        first_time = str(res[0]['time'])[:-3]
-        second_time = str(res[1]['time'])[:-3]
+        first_time = str(res[0]['time'])[:-3] if res[0]['time'] != None else 'None'
+        second_time = str(res[1]['time'])[:-3] if res[1]['time'] != None else 'None'
         print(f'[INFO] Выводим пользователю его время {first_time} и {second_time}')
         keyboard.row(KeyboardButton(f'🕛 {first_time}'), KeyboardButton(f'{second_time} 🕛'))
 
@@ -230,11 +219,6 @@ def change_time(time_str, side: str):
 def get_weather_cache():
     print('Обращаемся к GISMETEO за новыми данными')
     db_connect_old().change_log('Обращаемся к GISMETEO за новыми данными')
-    # config_dict = get_default_config()
-    # config_dict['language'] = 'ru'
-    # owm = OWM(api_key=OWM_KEY, config=config_dict)
-    # Кэш для хранения данных о погоде для каждого города
-    # mgr = owm.weather_manager() # Получаем свежую погоду
     weather_cache = {}
     cities = []
 
@@ -244,8 +228,6 @@ def get_weather_cache():
 
     for city in cities: # Получаем погоду по всем городам
         try:
-            # observation = mgr.weather_at_place(city + ", RU")
-            # weather_cache[city] = w
             r = requests.get(f'https://api.gismeteo.net/v2/weather/current/{city}/', headers=headers)
             weather_cache[city] = r.json()['response']
 
@@ -290,7 +272,7 @@ async def shedule_handler():
                     precipitation = w['precipitation']
                     
                     precipitation_emo = ['☀️ нет осадков', '🌧️ дождик', '🌨️снег', 'смешанные осадки']
-                    intensity_emo = ['нет осадков', 'небольшой дождь / снег', 'дождь / снег', 'сильный дождь / снег']
+                    intensity_emo = ['нет осадков', 'небольшой дождь или снег', 'дождь или снег', 'сильный дождь или снег']
                     x = cloudiness
                     smile = "🌤️" if x <= 20 else "⛅️" if x <= 50 else "🌥️" if x <= 75 else "☁️"
 
@@ -300,7 +282,7 @@ async def shedule_handler():
                     f"Облачность: {cloudiness}% {smile}\n",\
                     f"Осадки:\n",\
                     f"    Тип: {precipitation['type']}/3 - {precipitation_emo[int(precipitation['type'])]}\n",\
-                    f"    Количество: {precipitation['amount']}мм\n",\
+                    f"    Количество: {precipitation['amount'] if not None else '0'}мм\n",\
                     f"    Интенсивность: {precipitation['intensity']}/3 - {intensity_emo[int(precipitation['intensity'])]}\n"
                     text = "".join(text)
                     ### text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе {person['city']}: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"

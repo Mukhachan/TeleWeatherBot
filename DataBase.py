@@ -1,5 +1,5 @@
 import datetime
-import pymysql
+
 
 class DataBase:
     """
@@ -179,9 +179,11 @@ class DataBase:
         """
             Ищет запись по chat_id и time и заменяет time на newtime
         """
+        time = f'"{time}:00"' if ':' in time else 'NULL'
         sql = (
-            f'UPDATE `ArtemsWeatherBot`.`times` SET time=NULL WHERE chat_id={chat_id} AND `time`="{time}:00" '
+            f'UPDATE `ArtemsWeatherBot`.`times` SET time=NULL WHERE chat_id={chat_id} AND `time`={time} '
         )
+        print(time, sql)
         try:
             self.__cur.execute(sql)
             self.__connection.commit()
