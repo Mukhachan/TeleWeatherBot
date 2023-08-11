@@ -155,7 +155,7 @@ async def process_message(message: types.Message):
             else:
                 await bot.send_message(chat_id, 'Произошла, какая-то беда\nНапиши Артёму (@Mukhachan_dev)')
     elif message.text == 'chat_id':
-        message.reply("ID этого чата:", chat_id)
+        await message.reply(f"ID этого чата: {chat_id}")
     elif message.text == 'Отмена':
         # await bot.delete_message(chat_id=chat_id, message_id=message.message_id)
         await message.reply('Хорошо. Клавиатуру я вряд ли спрячу, но допекать не буду')
@@ -170,6 +170,8 @@ async def process_message(message: types.Message):
         print('[INFO] Принтуем расписание')
         mess = 'Вот твоё расписание\nНажми на время которое хочешь поменять'
         await add_time(message=message, chat_id=chat_id, mess=mess, pref=True)
+    elif 'спасибо' in message.text.lower():
+        await bot.send_message(chat_id=chat_id, text='Обращайся!)')
 
     if prev_time != current_time:
         # Отправляем обновленную клавиатуру
@@ -225,7 +227,7 @@ def get_weather_cache():
     for i in db_connect_old().get_cities(): # Получаем список всех городов в БД
         cities.append(i['city'])
     cities = set(cities)
-
+    print (cities)
     for city in cities: # Получаем погоду по всем городам
         try:
             r = requests.get(f'https://api.gismeteo.net/v2/weather/current/{city}/', headers=headers)

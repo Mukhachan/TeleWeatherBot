@@ -110,7 +110,6 @@ class DataBase:
         try:
             self.__cur.execute(sql)
             res = self.__cur.fetchall()
-            print(res)
             return res if res else []
         
         except Exception as e:
