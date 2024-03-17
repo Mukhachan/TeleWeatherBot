@@ -284,7 +284,7 @@ async def shedule_handler():
                     f"Облачность: {cloudiness}% {smile}\n",\
                     f"Осадки:\n",\
                     f"    Тип: {precipitation['type']}/3 - {precipitation_emo[int(precipitation['type'])]}\n",\
-                    f"    Количество: {precipitation['amount'] if not None else '0'}мм\n",\
+                    f"    Количество: {precipitation['amount'] if not 'None' else '0'}мм\n",\
                     f"    Интенсивность: {precipitation['intensity']}/3 - {intensity_emo[int(precipitation['intensity'])]}\n"
                     text = "".join(text)
                     ### text = f"{datetime.now().strftime('%H:%M %d/%m/%Y')}\nСейчас температура в городе {person['city']}: {int(w.temperature('celsius')['temp'])}°\nОщущается как: {int(w.temperature('celsius')['feels_like'])}°\nПогода: {w.detailed_status}\nОблачность: {w.clouds}%"
