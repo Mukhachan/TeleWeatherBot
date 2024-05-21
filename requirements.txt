@@ -13,7 +13,7 @@ geopy==2.3.0
 idna==3.7
 magic-filter==1.0.9
 multidict==6.0.4
-PyMySQL==1.1.0
+PyMySQL==1.1.1
 pyowm==3.3.0
 PySocks==1.7.1
 pytz==2023.3
